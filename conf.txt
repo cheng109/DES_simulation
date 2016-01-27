@@ -1,0 +1,14 @@
+## coarse correction
+##  (1) CHIP
+##	(2)	SHIFT_X
+##	(2)	SHIFT_Y
+##	(2)	SHIFT_Z	
+##	(2) Coarse_DEC
+##	(3) Coarse_RA
+## Coarse correction: 
+N22	coarse 10.0	-58.0
+N4	coarse	-4.0	-8.0
+N7	coarse	-43.0	-82
+N1	coarse	31.0	54.0	
+S22 coarse  -21		54
+S30	coarse	-32.0	80.0	
