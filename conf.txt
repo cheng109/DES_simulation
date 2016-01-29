@@ -1,4 +1,4 @@
-## coarse correction
+## Coarse Correction
 ##  (1) CHIP
 ##	(2)	SHIFT_X
 ##	(2)	SHIFT_Y
