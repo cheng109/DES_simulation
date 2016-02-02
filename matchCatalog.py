@@ -12,7 +12,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 
 def matchCatalog(dataObjList, simulationObjList):
-    distance_tolerance = 10
+    distance_tolerance = 20
     new_dataObjList=[]
     new_simulationObjList = []
     for obj in dataObjList:
@@ -773,24 +773,28 @@ def plotMultCHIPS(CHIPS, prefix, PSF_plot , ELL_plot):
 
 def main():
     ### preface #####
+    DIR  = "all_chips_results_tilt/"
     CHIPS = []
-    simName = []
-    shift = {"x": 0.0, "y": 1.4, "z": 0.0}
-
+    simNameList = []
+    shift = {"x": 0.0, "y": 0.0, "z": 0.0}
+    tilt = {"phi": 0.0, "psi": 0.0, "theta": -10}
+    #tilt = {"phi": 324000.0, "psi": 0.0, "theta": 40}
     #CHIPS.append("N1")
     #CHIPS.append("N4")
     #CHIPS.append("N7")
     #CHIPS.append("N22")
-    CHIPS.append("S22")
+    #CHIPS.append("S22")
 
     CHIPS = ["N1", "N4", "N7", "N22", "S22"]
 
     for chip in CHIPS :
-        simName.append("all_chips_results/Images_" + chip + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" + str(shift["z"]) + ".fits")
+        simName = DIR + "Images_" + chip + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" + str(shift["z"]) + "_phi_" + str(tilt["phi"])+ "_psi_" + str(tilt["psi"]) + "_theta_" + str(tilt["theta"])+ ".fits"
+        print simName
+        simNameList.append(simName)
 
 
     ### Operation ######
-    prefix = "all_chips_results/output_" + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" + str(shift["z"]) + "_"
+    prefix = DIR + "output_" + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" +str(shift["z"]) +  "_phi_" + str(tilt["phi"])+ "_psi_" + str(tilt["psi"]) + "_theta_" + str(tilt["theta"]) + "_"
     #matchCHIPS(CHIPS, simName, prefix = prefix)
     plotMultCHIPS(CHIPS, prefix = prefix, PSF_plot=False, ELL_plot=True)
 

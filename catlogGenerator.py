@@ -141,6 +141,7 @@ def writePhosimCatalog(phosimCatalogFile, objList, header, magCorrection):
     phosimFile.close()
 
 def writePhosimCommand(phosimCommandName, imageHeader, shift, tilt):
+    coefArcsecToRad = 4.8481e-6
     file = open(phosimCommandName,'w')
     file.write("zenith_v 1000.0\n"
                + "raydensity 0.0\n"
@@ -156,9 +157,9 @@ def writePhosimCommand(phosimCommandName, imageHeader, shift, tilt):
                #+ "atmosphericdispersion 0\n"
                #+ "detectormode 0\n"
                #+ "telescopemode 0\n"
-               + "body 0 0 " + str(tilt["phi"]  *math.pi/180) + "\n"
-               + "body 0 1 " + str(tilt["psi"]  *math.pi/180) + "\n"
-               + "body 0 2 " + str(tilt["theta"]*math.pi/180) + "\n"
+               + "body 0 0 " + str(tilt["phi"]  *coefArcsecToRad) + "\n"
+               + "body 0 1 " + str(tilt["psi"]  *coefArcsecToRad) + "\n"
+               + "body 0 2 " + str(tilt["theta"]*coefArcsecToRad) + "\n"
                + "body 0 3 " + str(shift["x"]) + "\n"
                + "body 0 4 " + str(shift["y"]) + "\n"
                + "body 0 5 " + str(shift["z"]) + "\n"
@@ -232,9 +233,9 @@ cd $PHOSIM_PATH
     outputDirectory = chip + "_output_ID_" + suffix
 
     createDirectory = "mkdir "+ workDirectory +" " + outputDirectory
-    deleteDirectory = "rm -rf " +  workDirectory +" " + outputDirectory + " " \
-                      + chip + "_phosimCatalog_ID_"+suffix + " " \
-                      + chip + "_phosimCommand_ID_"+suffix
+    deleteDirectory = "rm -rf " +  workDirectory +" " + outputDirectory + "\n" \
+                      + "rm -rf " + chip + "_phosimCatalog_ID_"+suffix + "\n" \
+                      + "rm -rf " + chip + "_phosimCommand_ID_"+suffix
 
     subprocess.call(createDirectory, shell=True)
     runScript += "./phosim $pwd/" + chip +"_phosimCatalog_ID_" + suffix + " -c $pwd/" \
@@ -281,11 +282,13 @@ def main():
 
 
 
-    #CHIPS = ["N1", "N4", "N7", "N22", "S22"]
-    CHIPS = ["N4"]
+    #CHIPS = ["N1", "N4", "N7", "N22", "S22"]590
+    CHIPS = ["S22"]
     shift = {"x": 0.0, "y": 0.0, "z": 0.0}
-    tilt = {"phi": 0.0, "psi": 0.0, "theta": 0.0}    # degree
-    dDEC, dRA, dROTATION = commons.posCorrection(shift)
+    #tilt = {"phi": 0.0, "psi": 0.0, "theta": 0.0}    # degree
+    tilt = {"phi": 324000.0, "psi": 0.0, "theta": 0.0}
+
+
     fineCorrect={}
     rawSeeing = 0.9
 
@@ -294,19 +297,22 @@ def main():
 
     combRUN = ""
     for chip in CHIPS:
-        for angle in np.arange(0, 0.5, 0.1):
+        for angle in np.arange(0,30, 20):
             suffix = str(random.randint(0, 999999999))
             tilt["theta"] = angle
+            dDEC, dRA, dROTATION = commons.posCorrection(shift, tilt)
+
+
             confCoarseMap = commons.parseConfigure("conf.txt")
             DEC, RA, ROTATION = confCoarseMap[chip][0]+ dDEC, confCoarseMap[chip][1]+ dRA, 270.0
 
             fineCorrect[chip] = {"dec":confCoarseMap[chip][0], "ra":confCoarseMap[chip][1], "rotation":ROTATION}    #magCorrection = 2;
-            catalogGenerator(chip,  coarseDec=dDEC, coarseRa=dRA, coarseRotation=0, fineCorrect=fineCorrect, magCorrection=6.0, rawSeeing=rawSeeing, shift=shift, tilt=tilt, suffix = suffix)
+            catalogGenerator(chip,  coarseDec=dDEC, coarseRa=dRA, coarseRotation=0, fineCorrect=fineCorrect, magCorrection=2.0, rawSeeing=rawSeeing, shift=shift, tilt=tilt, suffix = suffix)
 
             # create bash script
-            scriptName = "run_" + chip + "_" + str(angle)
+            scriptName = "run_" + chip + "_phi_" + str(tilt["phi"])  + "_" + str(angle)
             createRun(scriptName, chip, shift,tilt,  DestinationDir, suffix=suffix)
-            combRUN = combRUN + "./" + scriptName + "& "
+            combRUN = combRUN + "./" + scriptName + " & \n"
 
     f = open("combRUN", 'w')
     f.write(combRUN)
@@ -316,3 +322,6 @@ def main():
 if __name__=='__main__':
     main()
 
+
+# theta = -80 ;   dDEC =
+# theta = -60 ;   dDEC =

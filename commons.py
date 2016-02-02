@@ -146,13 +146,21 @@ def parseConfigure(confFileName):
     return confCoarseMap
 
 
-def posCorrection(shift):
+def posCorrection(shift, tilt):
+    #tilt = {"phi": 324000.0, "psi": 0.0, "theta": 0.0}
+    dDEC2 = 0
+    dRA2 = 0
+    # Correction for SHIFT
+    dDEC1 = -71.467*shift["x"]
+    dRA1 = 190.91* shift["y"] + 3.889
 
-
-    dDEC = -71.467*shift["x"]
-    dRA = 190.91* shift["y"] + 3.889
+    # Correction for TILT:
+    if tilt["phi"]==90.0:
+        dDEC2 =  -7.3744 *tilt["theta"] - 0.869
+    else:
+        dRA2 = -19.829*tilt["theta"] -12.786
     dROTATION = 0
-    return dDEC, dRA, dROTATION
+    return dDEC1+dDEC2, dRA1+dRA2, dROTATION
 
 
 def main():
