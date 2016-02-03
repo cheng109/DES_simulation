@@ -36,71 +36,8 @@ def combineChips(objDict):
         objList = objList + value
     return objList
 
-def getCorrelation(objDict):
-    ObjList = combineChips(objDict)
-    l = len(ObjList)
-    print "number of obj: ", l
-    Distance = []
-    Distance2 = []
-    Exx = []
-    counter = 0;
-    for i in range(l):
-        if ObjList[i].type =="star":
-            starA = ObjList[i]
-
-            for j in np.arange(i+1, l-i-1):
-                if ObjList[j].type =="star":
-                    counter = counter+1
-                    starB = ObjList[j]
-                    dRa = starA.ra - starB.ra
-                    dDec = starA.dec - starB.dec
-                    dx = starA.xcenter - starB.xcenter
-                    dy = starA.ycenter - starB.ycenter
-                    if dRa<1.0e-8:
-                        continue
-                    if dx<1.0e-6:
-                        continue
-                    angle = -2* math.atan(dDec/dRa)   # in radian
-                    angle = -2* math.atan(dy/dx)   # in radian
-                    XA_t=(starA.new_e1*np.cos(angle)-starA.new_e2*np.sin(angle))
-                    XA_x=(starA.new_e1*np.sin(angle)+starA.new_e2*np.cos(angle))
-                    XB_t=(starB.new_e1*np.cos(angle)-starB.new_e2*np.sin(angle))
-                    XB_x=(starB.new_e1*np.sin(angle)+starB.new_e2*np.cos(angle))
-                    #Distance.append( np.sqrt(dRa**2+dDec**2)*3600/0.27)
-                    Distance2.append(np.sqrt(dx**2+dy**2))
-                    print Distance2[-1]
-
-                    Exx.append( XA_t*XB_t + XA_x*XB_x)
-    print "number of stars conbinations: ", counter
-    interval = 300
-    Exxbins = [[] for i in range(int(10000/interval))]
-    print len(Distance2)
-    for i in range(len(Exx)):   # bins[0] means interval between [0, 50]
-
-        Exxbins[int(Distance2[i]/interval)].append(Exx[i])
-    newDistance = []
-    newExx = []
-    stdErr = []
-    for i in range(len(Exxbins)):
-        if len(Exxbins[i])>0:
-            newDistance.append((i+0.5)*interval*0.27/60)
-            newExx.append(np.mean(Exxbins[i]))
-            stdErr.append(np.std(Exxbins[i])/np.sqrt(len(Exxbins[i])))
-    return newDistance, newExx, stdErr
 
 
-def plotCor(dataObjDict,simulationObjDict ):
-
-    dataDistance, dataExx, dataStdErr = getCorrelation(dataObjDict)
-    simDistance, simExx, simStdErr = getCorrelation(simulationObjDict)
-    plt.errorbar(dataDistance, dataExx, dataStdErr, fmt='o', label="data")
-    plt.errorbar(simDistance, simExx, simStdErr, fmt='o', label="simulation")
-    plt.xlabel("Distance (arcmin)")
-    plt.ylabel("Ellipticity correlation")
-    plt.title("Elliptictiy correlation")
-    plt.legend()
-
-    plt.show()
 
 def readinfo(fileName, CHIP):
 
@@ -165,8 +102,48 @@ def getCor(xcenter, ycenter, e1, e2, e):
     return newDistance, newExx, stdErr
 
 
+def getCorrelation(e, e1, e2, RA, DEC):
+    l = len(e)
+    Distance = []
+    Exx = []
+    for i in range(l):
+        for j in np.arange(i+1, l):
+            dDEC = DEC[i] - DEC[j]
+            dRA = RA[i] - RA[j]
+            if dRA<1.0e-6:
+                continue
+            angle = -2* math.atan(dRA/dDEC)   # in radian
+            XA_t=(e1[i]*np.cos(angle)-e2[i]*np.sin(angle))
+            XA_x=(e1[i]*np.sin(angle)+e2[i]*np.cos(angle))
+            XB_t=(e1[j]*np.cos(angle)-e2[j]*np.sin(angle))
+            XB_x=(e1[j]*np.sin(angle)+e2[j]*np.cos(angle))
+            Distance.append(np.sqrt(dDEC**2+dRA**2)*60)      # distance is in degree;
 
-def main():
+
+            Exx.append( XA_t*XB_t + XA_x*XB_x)
+
+    print max(Distance)
+    interval = 2.0   # in arcmin
+    Exxbins = [[] for i in range(int(120/interval))]
+    #print len(Distance)
+    for i in range(len(Exx)):   # bins[0] means interval between [0, 50]
+
+        Exxbins[int(Distance[i]/interval)].append(Exx[i])
+    newDistance = []
+    newExx = []
+    stdErr = []
+    for i in range(len(Exxbins)):
+        if len(Exxbins[i])>0:
+            newDistance.append((i+0.5)*interval)
+            newExx.append(np.mean(Exxbins[i]))
+            stdErr.append(np.std(Exxbins[i])/np.sqrt(len(Exxbins[i])))
+
+
+
+    return newDistance, newExx, stdErr
+
+
+def main1():
 
     CHIPS = ["N4","N7"]
     dataCenterX = []
@@ -218,6 +195,70 @@ def main():
 
 
     return
+
+
+def combineFiles(CHIPS, shift, tilt,  type, DIR):
+    # type = "_Data_"
+    # type = "_Simu_"
+    e = []
+    e1 = []
+    e2 = []
+    RA = []
+    DEC = []
+
+    prefix = DIR + "output_" + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" +str(shift["z"]) +  "_phi_" + str(tilt["phi"])+ "_psi_" + str(tilt["psi"]) + "_theta_" + str(tilt["theta"]) + "_"
+    for chip in CHIPS:
+        fileName = prefix + "ELL" + type + chip + ".txt"
+        f = open(fileName, 'r')
+        for line in f.readlines():
+            temp = line.split()
+            e.append(float(temp[0]))
+            e1.append(float(temp[1]))
+            e2.append(float(temp[2]))
+            RA.append(float(temp[3]))
+            DEC.append(float(temp[4]))
+    return e, e1, e2, RA, DEC
+
+
+def plotCor(dataObjDict,simulationObjDict ):
+
+    dataDistance, dataExx, dataStdErr = getCorrelation(dataObjDict)
+    simDistance, simExx, simStdErr = getCorrelation(simulationObjDict)
+    plt.errorbar(dataDistance, dataExx, dataStdErr, fmt='o', label="data")
+    plt.errorbar(simDistance, simExx, simStdErr, fmt='o', label="simulation")
+    plt.xlabel("Distance (arcmin)")
+    plt.ylabel("Ellipticity correlation")
+    plt.title("Elliptictiy correlation")
+    plt.legend()
+
+    plt.show()
+
+
+def main():
+    CHIPS = ["N1", "N4", "N7", "N22", "S22"]
+    #CHIPS  = ["N1"]
+
+    DIR = "new_all_chips_results_tilt/"
+
+    shift = {"x": 0.0, "y": 0.0, "z": 0.0}
+    tilt = {"phi": 0.0, "psi": 0.0, "theta": -20}
+
+    data_e, data_e1, data_e2, data_RA, data_DEC = combineFiles(CHIPS, shift, tilt, type = "_Data_", DIR=DIR)
+    simu_e, simu_e1, simu_e2, simu_RA, simu_DEC = combineFiles(CHIPS, shift, tilt, type = "_Simu_", DIR=DIR)
+
+    data_Distance, data_Exx, data_StdErr = getCorrelation(data_e, data_e1, data_e2, data_RA, data_DEC)
+    simu_Distance, simu_Exx, simu_StdErr = getCorrelation(simu_e, simu_e1, simu_e2, simu_RA, simu_DEC)
+
+    plt.errorbar(data_Distance, data_Exx, data_StdErr, fmt='o', label="data")
+    plt.errorbar(simu_Distance, simu_Exx, simu_StdErr, fmt='o', label="simulation")
+    plt.xlabel("Distance (arcmin)")
+    plt.ylabel("Ellipticity correlation")
+    plt.title("Elliptictiy correlation")
+    plt.legend()
+
+    plt.show()
+
+
 
 if __name__=='__main__':
     main()

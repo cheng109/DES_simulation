@@ -299,7 +299,7 @@ def main():
 
     combRUN = ""
     for chip in CHIPS:
-        for angle in np.arange(-20,0, 200):
+        for angle in np.arange(0,10, 200):
             suffix = str(random.randint(0, 999999999))
             tilt["theta"] = angle
             dDEC, dRA, dROTATION = commons.posCorrection(shift, tilt)

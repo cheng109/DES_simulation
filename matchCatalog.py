@@ -281,12 +281,16 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList, dataFileName, sim
     dataPA = []
     dataRA = []
     dataDEC = []
+    dataE1 = []
+    dataE2 = []
 
     simulationElipse = []
     simulationFWHM = []
     simulationPA = []
     simulationRA = []
     simulationDEC = []
+    simulationE1 = []
+    simulationE2 = []
 
     dataFlux = []
     simulationFlux = []
@@ -299,6 +303,8 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList, dataFileName, sim
         if obj.type=="star" and obj.new_e < eLimit and obj.new_e > 0.000001:
             dataFlux.append(obj.flux)
             dataEllipse.append(obj.new_e)
+            dataE1.append(obj.new_e1)
+            dataE2.append(obj.new_e2)
             dataPA.append(obj.new_angle)
             dataFWHM.append(obj.fwhm)
             simulationFWHM.append(obj.matchFWHM)
@@ -307,16 +313,21 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList, dataFileName, sim
 
             dataRA.append(dataRa)
             dataDEC.append(dataDec)
-            simulationRA.append(dataRa)
-            simulationDEC.append(dataDec)
+
 
 
     for obj in new_simulationObjList:
         if obj.type=="star"and obj.new_e < eLimit and obj.new_e > 0.000001:
-            simulationElipse.append(obj.new_e)
             simulationFlux.append(obj.flux)
             simulationPA.append(obj.new_angle)
 
+            dataRa, dataDec = commons.pix2world(simFileName, obj.xcenter, obj.ycenter)
+
+            simulationElipse.append(obj.new_e)
+            simulationE1.append(obj.new_e1)
+            simulationE2.append(obj.new_e2)
+            simulationRA.append(dataRa)
+            simulationDEC.append(dataDec)
 
 
     for e in dataEllipse:
@@ -332,7 +343,7 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList, dataFileName, sim
     print "meanDataPA:", np.mean(dataPA), "\tSTD: ", np.std(dataPA)
     print "meanSimPA: ", np.mean(simulationPA), "\tSTD: ", np.std(simulationPA)
     print "==================="
-    return dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM, dataRA, dataDEC, simulationRA, simulationDEC
+    return dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM, dataRA, dataDEC, simulationRA, simulationDEC, dataE1, dataE2, simulationE1, simulationE2
 
 
 
@@ -426,7 +437,8 @@ def plotEllipticityAndCorrelation(dataImageName, simulationImageName, new_dataOb
     #    f.write(str(simDistance[i]) +"\t" + str(simExx[i]) + "\t" + str(simStdErr[i]) + "\n")
     #f.close()
 
-    dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC = getEllipticityDiff(new_dataObjList, new_simulationObjList, dataImageName, simulationImageName)
+    dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC, dataE1, dataE2, simulationE1, simulationE2\
+        = getEllipticityDiff(new_dataObjList, new_simulationObjList, dataImageName, simulationImageName)
     #####  PLOT ELLIPTICITY VS  FLUX ################
     #plt.plot(dataFlux, dataEllipse, 'bo', label='Data' )
     #plt.plot(simulationFlux, simulationElipse, 'og', label='Simulation')
@@ -539,7 +551,8 @@ def updateEllipticity(imageName, ObjList, type, writeStamps):
     print "Test_Test_Test"
     for obj in ObjList:
         #obj.type=="gauss"
-        if obj.type=="star"  and  not (obj.xcenter <15 and obj.ycenter> 955 and obj.ycenter<980 ):#and obj.ycenter-winSizeY>0 and obj.ycenter+winSizeY < 4000 and obj.xcenter-winSizeX>0 and obj.xcenter+winSizeX < 2000:
+        if obj.type=="star"  and  not (obj.xcenter <15 and obj.ycenter> 955 and obj.ycenter<980 ):
+        #and obj.ycenter-winSizeY>0 and obj.ycenter+winSizeY < 4000 and obj.xcenter-winSizeX>0 and obj.xcenter+winSizeX < 2000:
             yrange_start = int(obj.ycenter-winSizeY)
             yrange_end = int(obj.ycenter+winSizeY)
 
@@ -650,11 +663,13 @@ def matchCHIPS(CHIPS, simName, prefix):
 
         dataImageName = CHIPS[i] + "_test_image.fits"
         new_dataObjList, new_simulationObjList = singleMatch(CHIPS[i], dataImageName=dataImageName, simulationImageName=simName[i], simulationCatalog = CHIPS[i] +"_simCatalog", dataCatalog=CHIPS[i]+"_dataCatalog", plot=True, writeStamps=False)
-        dataEllipse, simulationEllipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC \
+        dataEllipse, simulationEllipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC , dataE1, dataE2, simulationE1, simulationE2\
             = getEllipticityDiff(new_dataObjList, new_simulationObjList, dataImageName, simName[i])
 
         for i in range(len(simulationEllipse)):
             sim_ELL_file.write(str(simulationEllipse[i]) + "\t")
+            sim_ELL_file.write(str(simulationE1[i]) + "\t")
+            sim_ELL_file.write(str(simulationE2[i]) + "\t")
             sim_ELL_file.write(str(simulationRA[i]) + "\t")
             sim_ELL_file.write(str(simulationDEC[i]) + "\n")
         for i in range(len(simulationFWHM)):
@@ -665,6 +680,9 @@ def matchCHIPS(CHIPS, simName, prefix):
 
         for i in range(len(dataEllipse)):
             data_ELL_file.write(str(dataEllipse[i]) + "\t")
+            data_ELL_file.write(str(dataE1[i]) + "\t")
+            data_ELL_file.write(str(dataE2[i]) + "\t")
+
             data_ELL_file.write(str(dataRA[i]) + "\t")
             data_ELL_file.write(str(dataDEC[i]) + "\n")
         for i in range(len(dataFWHM)) :
@@ -806,7 +824,7 @@ def main():
     shift = {"x": 0.0, "y": 0.0, "z": 0.0}
     tilt = {"phi": 0.0, "psi": 0.0, "theta": -20}
     #tilt = {"phi": 324000.0, "psi": 0.0, "theta": 40}
-    CHIPS.append("N1")
+    #CHIPS.append("N1")
     #CHIPS.append("N4")
     #CHIPS.append("N7")
     #CHIPS.append("N22")
