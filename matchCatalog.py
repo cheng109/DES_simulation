@@ -10,6 +10,7 @@ import commons
 import measurepsf
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
+from astropy.wcs import WCS
 
 def matchCatalog(dataObjList, simulationObjList):
     distance_tolerance = 20
@@ -271,20 +272,29 @@ def plotStarSizeDiff(new_dataObjList, new_simulationObjList):
     #ax4.set_ylim([3.7, 4.3])
     #plt.show()
 
-def getEllipticityDiff(new_dataObjList, new_simulationObjList):
+def getEllipticityDiff(new_dataObjList, new_simulationObjList, dataFileName, simFileName):
     fdataEll = open("dataEll.txt", 'w')
     fsimEll = open("simEll.txt", 'w')
+
     dataEllipse = []
     dataFWHM = []
+    dataPA = []
+    dataRA = []
+    dataDEC = []
+
     simulationElipse = []
     simulationFWHM = []
-    dataPA = []
     simulationPA = []
+    simulationRA = []
+    simulationDEC = []
 
     dataFlux = []
     simulationFlux = []
 
     eLimit = 0.35
+
+    #wcsData = WCS(dataFileName)
+    #wcsSim  = WCS(simFileName)
     for obj in new_dataObjList:
         if obj.type=="star" and obj.new_e < eLimit and obj.new_e > 0.000001:
             dataFlux.append(obj.flux)
@@ -292,6 +302,15 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList):
             dataPA.append(obj.new_angle)
             dataFWHM.append(obj.fwhm)
             simulationFWHM.append(obj.matchFWHM)
+
+            dataRa, dataDec = commons.pix2world(simFileName, obj.xcenter, obj.ycenter)
+
+            dataRA.append(dataRa)
+            dataDEC.append(dataDec)
+            simulationRA.append(dataRa)
+            simulationDEC.append(dataDec)
+
+
     for obj in new_simulationObjList:
         if obj.type=="star"and obj.new_e < eLimit and obj.new_e > 0.000001:
             simulationElipse.append(obj.new_e)
@@ -313,7 +332,7 @@ def getEllipticityDiff(new_dataObjList, new_simulationObjList):
     print "meanDataPA:", np.mean(dataPA), "\tSTD: ", np.std(dataPA)
     print "meanSimPA: ", np.mean(simulationPA), "\tSTD: ", np.std(simulationPA)
     print "==================="
-    return dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM
+    return dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM, dataRA, dataDEC, simulationRA, simulationDEC
 
 
 
@@ -407,7 +426,7 @@ def plotEllipticityAndCorrelation(dataImageName, simulationImageName, new_dataOb
     #    f.write(str(simDistance[i]) +"\t" + str(simExx[i]) + "\t" + str(simStdErr[i]) + "\n")
     #f.close()
 
-    dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM = getEllipticityDiff(new_dataObjList, new_simulationObjList)
+    dataEllipse, simulationElipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC = getEllipticityDiff(new_dataObjList, new_simulationObjList, dataImageName, simulationImageName)
     #####  PLOT ELLIPTICITY VS  FLUX ################
     #plt.plot(dataFlux, dataEllipse, 'bo', label='Data' )
     #plt.plot(simulationFlux, simulationElipse, 'og', label='Simulation')
@@ -631,20 +650,28 @@ def matchCHIPS(CHIPS, simName, prefix):
 
         dataImageName = CHIPS[i] + "_test_image.fits"
         new_dataObjList, new_simulationObjList = singleMatch(CHIPS[i], dataImageName=dataImageName, simulationImageName=simName[i], simulationCatalog = CHIPS[i] +"_simCatalog", dataCatalog=CHIPS[i]+"_dataCatalog", plot=True, writeStamps=False)
-        dataEllipse, simulationEllipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM = getEllipticityDiff(new_dataObjList, new_simulationObjList)
+        dataEllipse, simulationEllipse, dataFlux, simulationFlux, dataPA, simulationPA, dataFWHM, simulationFWHM,  dataRA, dataDEC, simulationRA, simulationDEC \
+            = getEllipticityDiff(new_dataObjList, new_simulationObjList, dataImageName, simName[i])
 
         for i in range(len(simulationEllipse)):
-            sim_ELL_file.write(str(simulationEllipse[i]) + "\n")
+            sim_ELL_file.write(str(simulationEllipse[i]) + "\t")
+            sim_ELL_file.write(str(simulationRA[i]) + "\t")
+            sim_ELL_file.write(str(simulationDEC[i]) + "\n")
         for i in range(len(simulationFWHM)):
             sim_PSF_file.write(str(simulationFWHM[i]) + "\n")
+        for i in range(len(simulationPA)):
+            sim_PA_file.write(str(simulationPA[i]) + "\n")
+
+
         for i in range(len(dataEllipse)):
-            data_ELL_file.write(str(dataEllipse[i]) + "\n")
+            data_ELL_file.write(str(dataEllipse[i]) + "\t")
+            data_ELL_file.write(str(dataRA[i]) + "\t")
+            data_ELL_file.write(str(dataDEC[i]) + "\n")
         for i in range(len(dataFWHM)) :
             data_PSF_file.write(str(dataFWHM[i]) + "\n")
         for i in range(len(dataPA)):
             data_PA_file.write(str(dataPA[i]) + "\n")
-        for i in range(len(simulationPA)):
-            sim_PA_file.write(str(simulationPA[i]) + "\n")
+
 
 
         data_ELL_file.close()
@@ -773,13 +800,13 @@ def plotMultCHIPS(CHIPS, prefix, PSF_plot , ELL_plot):
 
 def main():
     ### preface #####
-    DIR  = "all_chips_results_tilt/"
+    DIR  = "new_all_chips_results_tilt/"
     CHIPS = []
     simNameList = []
     shift = {"x": 0.0, "y": 0.0, "z": 0.0}
-    tilt = {"phi": 0.0, "psi": 0.0, "theta": -10}
+    tilt = {"phi": 0.0, "psi": 0.0, "theta": -20}
     #tilt = {"phi": 324000.0, "psi": 0.0, "theta": 40}
-    #CHIPS.append("N1")
+    CHIPS.append("N1")
     #CHIPS.append("N4")
     #CHIPS.append("N7")
     #CHIPS.append("N22")
@@ -789,13 +816,12 @@ def main():
 
     for chip in CHIPS :
         simName = DIR + "Images_" + chip + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" + str(shift["z"]) + "_phi_" + str(tilt["phi"])+ "_psi_" + str(tilt["psi"]) + "_theta_" + str(tilt["theta"])+ ".fits"
-        print simName
         simNameList.append(simName)
 
 
     ### Operation ######
     prefix = DIR + "output_" + "_x_" + str(shift["x"]) + "_y_" + str(shift["y"]) + "_z_" +str(shift["z"]) +  "_phi_" + str(tilt["phi"])+ "_psi_" + str(tilt["psi"]) + "_theta_" + str(tilt["theta"]) + "_"
-    #matchCHIPS(CHIPS, simName, prefix = prefix)
+    matchCHIPS(CHIPS, simNameList, prefix = prefix)
     plotMultCHIPS(CHIPS, prefix = prefix, PSF_plot=False, ELL_plot=True)
 
 

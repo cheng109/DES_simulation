@@ -22,6 +22,7 @@ class ChipConfig:
 
 def copyWCS(dataImageName,simulationImageName):
     dataHeader = fits.getheader(dataImageName, 0)
+
     data,  SimulationHeader= fits.getdata(simulationImageName, header=True)
 
     SimulationHeader["CRPIX1"] = dataHeader["CRPIX1"]
@@ -161,6 +162,37 @@ def posCorrection(shift, tilt):
         dRA2 = -19.829*tilt["theta"] -12.786
     dROTATION = 0
     return dDEC1+dDEC2, dRA1+dRA2, dROTATION
+
+
+def pix2world(imageFileName, X, Y):
+
+    hdulist = fits.open(imageFileName)
+    h = hdulist[0].header
+    CD1_1 = float(h["CD1_1"])
+    CD1_2 = float(h["CD1_2"])
+    CD2_1 = float(h["CD2_1"])
+    CD2_2 = float(h["CD2_2"])
+
+    CRPIX1 = float(h["CRPIX1"])
+    CRPIX2 = float(h["CRPIX2"])
+
+    CRVAL1 = float(h["CRVAL1"])
+    CRVAL2 = float(h["CRVAL2"])
+
+    dX = X - CRPIX1
+    dY = Y - CRPIX2
+
+
+    RA = CD1_1 * dX + CD1_2 * dY  + CRVAL1
+    DEC = CD2_1 * dX + CD2_2 * dY + CRVAL2
+
+
+    return RA, DEC
+
+
+
+
+
 
 
 def main():

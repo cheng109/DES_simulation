@@ -114,6 +114,7 @@ class SexSource():
         #print self.new_angle
 
 
+
 def readSexCatalog(chipID, sexCatalogFile):
     sexFile = open(sexCatalogFile, 'r')
     paramList = []
@@ -233,9 +234,10 @@ cd $PHOSIM_PATH
     outputDirectory = chip + "_output_ID_" + suffix
 
     createDirectory = "mkdir "+ workDirectory +" " + outputDirectory
-    deleteDirectory = "rm -rf " +  workDirectory +" " + outputDirectory + "\n" \
-                      + "rm -rf " + chip + "_phosimCatalog_ID_"+suffix + "\n" \
-                      + "rm -rf " + chip + "_phosimCommand_ID_"+suffix
+    deleteDirectory = "rm -rf $pwd/" +  workDirectory +"\n" \
+                      + "rm -rf $pwd/"+ outputDirectory + "\n" \
+                      + "rm -rf $pwd/" + chip + "_phosimCatalog_ID_"+suffix + "\n" \
+                      + "rm -rf $pwd/" + chip + "_phosimCommand_ID_"+suffix
 
     subprocess.call(createDirectory, shell=True)
     runScript += "./phosim $pwd/" + chip +"_phosimCatalog_ID_" + suffix + " -c $pwd/" \
@@ -282,22 +284,22 @@ def main():
 
 
 
-    #CHIPS = ["N1", "N4", "N7", "N22", "S22"]590
-    CHIPS = ["S22"]
+    CHIPS = ["N1", "N4", "N7", "N22", "S22"]
+    #CHIPS = ["S22"]
     shift = {"x": 0.0, "y": 0.0, "z": 0.0}
-    #tilt = {"phi": 0.0, "psi": 0.0, "theta": 0.0}    # degree
-    tilt = {"phi": 324000.0, "psi": 0.0, "theta": 0.0}
+    tilt = {"phi": 0.0, "psi": 0.0, "theta": 0.0}    # degree
+    #tilt = {"phi": 324000.0, "psi": 0.0, "theta": 0.0}
 
 
     fineCorrect={}
     rawSeeing = 0.9
 
 
-    DestinationDir = "all_chips_results_tilt"
+    DestinationDir = "new_all_chips_results_tilt"
 
     combRUN = ""
     for chip in CHIPS:
-        for angle in np.arange(0,30, 20):
+        for angle in np.arange(-20,0, 200):
             suffix = str(random.randint(0, 999999999))
             tilt["theta"] = angle
             dDEC, dRA, dROTATION = commons.posCorrection(shift, tilt)
